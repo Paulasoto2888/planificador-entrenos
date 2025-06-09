@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Calendario de Entrenos</title>
   <style>
     body {
@@ -58,6 +58,11 @@
     #login {
       margin-bottom: 20px;
     }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
   </style>
 </head>
 <body>
@@ -95,8 +100,26 @@
     const db = getFirestore(app);
 
     const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-    const opciones = ["", "Correr", "Escalar", "GYM", "Guardia", "Descanso", "DEKA"];
-    const estaciones = ["SkiErg", "Box Jumps", "Farmer Carry", "Air Bike", "Sandbag Lunges"];
+    const opciones = [
+      { text: "🏃‍♀️ Correr", value: "Correr" },
+      { text: "🧗 Escalar", value: "Escalar" },
+      { text: "💪 GYM", value: "GYM" },
+      { text: "🛡️ Guardia", value: "Guardia" },
+      { text: "😴 Descanso", value: "Descanso" },
+      { text: "🔥 DEKA", value: "DEKA" }
+    ];
+    const estacionesDeka = [
+      "1. Ram",
+      "2. Row",
+      "3. Box Jump",
+      "4. Med Ball Sit-up",
+      "5. SkiErg",
+      "6. Farmer Carry",
+      "7. Air Bike",
+      "8. Dead Ball Wall Overs",
+      "9. Tank Push/Pull",
+      "10. Burpees"
+    ];
 
     const loginDiv = document.getElementById("login");
     const calDiv = document.getElementById("calendario");
@@ -130,51 +153,62 @@
       dias.forEach(dia => {
         const cont = document.createElement("div");
         cont.className = "dia";
-
         const titulo = document.createElement("h3");
         titulo.textContent = dia;
         cont.appendChild(titulo);
 
-        const select = document.createElement("select");
+        const select1 = document.createElement("select");
+        const select2 = document.createElement("select");
         opciones.forEach(op => {
-          const option = document.createElement("option");
-          option.value = op;
-          option.textContent = op;
-          select.appendChild(option);
+          const o1 = document.createElement("option");
+          o1.value = op.value;
+          o1.textContent = op.text;
+          const o2 = o1.cloneNode(true);
+          select1.appendChild(o1);
+          select2.appendChild(o2);
         });
 
         const extra = document.createElement("div");
         extra.className = "extra";
 
-        if (datosGuardados[dia]) {
-          select.value = datosGuardados[dia].tipo;
-          extra.innerHTML = datosGuardados[dia].detalles;
-          extra.style.display = "block";
-        }
-
-        select.addEventListener("change", async () => {
+        const procesarCambio = async () => {
           extra.innerHTML = "";
-          if (select.value === "DEKA") {
-            estaciones.forEach(est => {
-              const label = document.createElement("label");
-              label.textContent = est + ": ";
+          [select1, select2].forEach(select => {
+            if (select.value === "GYM" || select.value === "Correr") {
               const input = document.createElement("input");
-              extra.appendChild(label);
+              input.placeholder = `Descripción para ${select.value}`;
               extra.appendChild(input);
-              extra.appendChild(document.createElement("br"));
-            });
-          } else if (select.value === "GYM" || select.value === "Correr") {
-            const input = document.createElement("input");
-            input.placeholder = "Descripción del entreno";
-            extra.appendChild(input);
-          }
-          extra.style.display = "block";
-          const datos = snap.exists() ? snap.data() : {};
-          datos[dia] = { tipo: select.value, detalles: extra.innerHTML };
-          await setDoc(ref, datos);
-        });
+            } else if (select.value === "DEKA") {
+              extra.appendChild(document.createElement("hr"));
+              estacionesDeka.forEach(est => {
+                const label = document.createElement("label");
+                const chk = document.createElement("input");
+                chk.type = "checkbox";
+                chk.value = est;
+                label.appendChild(chk);
+                label.appendChild(document.createTextNode(est));
+                extra.appendChild(label);
+              });
+              const tiempo = document.createElement("input");
+              tiempo.placeholder = "Tiempo total DEKA";
+              extra.appendChild(tiempo);
+            }
+          });
 
-        cont.appendChild(select);
+          const datos = snap.exists() ? snap.data() : {};
+          datos[dia] = {
+            tipo1: select1.value,
+            tipo2: select2.value,
+            detalles: extra.innerHTML
+          };
+          await setDoc(ref, datos);
+        };
+
+        select1.addEventListener("change", procesarCambio);
+        select2.addEventListener("change", procesarCambio);
+
+        cont.appendChild(select1);
+        cont.appendChild(select2);
         cont.appendChild(extra);
         grid.appendChild(cont);
       });
