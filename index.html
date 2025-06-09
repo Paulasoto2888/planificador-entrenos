@@ -1,30 +1,68 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Planificador de Entrenos</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendario de Entrenos</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7fa;
+      margin: 0;
       padding: 20px;
       text-align: center;
     }
-    select, input, button {
-      margin: 5px;
-      padding: 5px;
+    h1 {
+      color: #333;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 30px;
     }
     .dia {
-      margin-top: 15px;
+      background: #ffffff;
+      border: 2px solid #d3e0ea;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.05);
+    }
+    .dia h3 {
+      margin-top: 0;
+      color: #0077b6;
+    }
+    select, input {
+      margin-top: 5px;
+      padding: 5px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
     .extra {
-      display: none;
-      margin-top: 5px;
+      margin-top: 10px;
+      text-align: left;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      background-color: #0077b6;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005f87;
+    }
+    #login {
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
   <h1>📅 Planificador de Entrenos</h1>
+
   <div id="login">
     <input type="email" id="email" placeholder="Correo" />
     <input type="password" id="password" placeholder="Contraseña" />
@@ -34,7 +72,7 @@
 
   <div id="calendario" style="display:none;">
     <h2>Bienvenida, Paula 👋</h2>
-    <div id="semana"></div>
+    <div id="grid"></div>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
@@ -56,30 +94,63 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const loginDiv = document.getElementById("login");
-    const calendarioDiv = document.getElementById("calendario");
-    const semanaDiv = document.getElementById("semana");
-
     const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
     const opciones = ["", "Correr", "Escalar", "GYM", "Guardia", "Descanso", "DEKA"];
     const estaciones = ["SkiErg", "Box Jumps", "Farmer Carry", "Air Bike", "Sandbag Lunges"];
 
-    function crearCalendario(userId) {
-      semanaDiv.innerHTML = "";
+    const loginDiv = document.getElementById("login");
+    const calDiv = document.getElementById("calendario");
+    const grid = document.getElementById("grid");
+
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      signInWithEmailAndPassword(auth, email, password).catch(err => alert("Error: " + err.message));
+    }
+
+    function register() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      createUserWithEmailAndPassword(auth, email, password).catch(err => alert("Error: " + err.message));
+    }
+
+    function logout() {
+      signOut(auth);
+    }
+
+    document.getElementById("btnLogin").addEventListener("click", login);
+    document.getElementById("btnRegister").addEventListener("click", register);
+
+    async function crearCalendario(uid) {
+      grid.innerHTML = "";
+      const ref = doc(db, "usuarios", uid);
+      const snap = await getDoc(ref);
+      const datosGuardados = snap.exists() ? snap.data() : {};
+
       dias.forEach(dia => {
         const cont = document.createElement("div");
         cont.className = "dia";
-        cont.innerHTML = `<strong>${dia}</strong>: `;
-        const select = document.createElement("select");
-        const extra = document.createElement("div");
-        extra.className = "extra";
 
+        const titulo = document.createElement("h3");
+        titulo.textContent = dia;
+        cont.appendChild(titulo);
+
+        const select = document.createElement("select");
         opciones.forEach(op => {
           const option = document.createElement("option");
           option.value = op;
           option.textContent = op;
           select.appendChild(option);
         });
+
+        const extra = document.createElement("div");
+        extra.className = "extra";
+
+        if (datosGuardados[dia]) {
+          select.value = datosGuardados[dia].tipo;
+          extra.innerHTML = datosGuardados[dia].detalles;
+          extra.style.display = "block";
+        }
 
         select.addEventListener("change", async () => {
           extra.innerHTML = "";
@@ -88,7 +159,6 @@
               const label = document.createElement("label");
               label.textContent = est + ": ";
               const input = document.createElement("input");
-              input.placeholder = "Ejercicio";
               extra.appendChild(label);
               extra.appendChild(input);
               extra.appendChild(document.createElement("br"));
@@ -99,10 +169,6 @@
             extra.appendChild(input);
           }
           extra.style.display = "block";
-
-          // Guardar datos en Firestore
-          const ref = doc(db, "usuarios", userId);
-          const snap = await getDoc(ref);
           const datos = snap.exists() ? snap.data() : {};
           datos[dia] = { tipo: select.value, detalles: extra.innerHTML };
           await setDoc(ref, datos);
@@ -110,37 +176,18 @@
 
         cont.appendChild(select);
         cont.appendChild(extra);
-        semanaDiv.appendChild(cont);
+        grid.appendChild(cont);
       });
     }
 
-    function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      signInWithEmailAndPassword(auth, email, password).catch(err => alert("Error al iniciar sesión: " + err.message));
-    }
-
-    function register() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      createUserWithEmailAndPassword(auth, email, password).catch(err => alert("Error al registrarse: " + err.message));
-    }
-
-    function logout() {
-      signOut(auth);
-    }
-
-    document.getElementById("btnLogin").addEventListener("click", login);
-    document.getElementById("btnRegister").addEventListener("click", register);
-
-    onAuthStateChanged(auth, async user => {
+    onAuthStateChanged(auth, user => {
       if (user) {
         loginDiv.style.display = "none";
-        calendarioDiv.style.display = "block";
+        calDiv.style.display = "block";
         crearCalendario(user.uid);
       } else {
         loginDiv.style.display = "block";
-        calendarioDiv.style.display = "none";
+        calDiv.style.display = "none";
       }
     });
   </script>
