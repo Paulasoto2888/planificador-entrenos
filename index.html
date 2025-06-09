@@ -10,19 +10,21 @@
       padding: 20px;
       text-align: center;
     }
-    input, button {
+    select, input, button {
       margin: 5px;
-      padding: 10px;
+      padding: 5px;
     }
-    #calendario {
+    .dia {
+      margin-top: 15px;
+    }
+    .extra {
       display: none;
-      margin-top: 30px;
+      margin-top: 5px;
     }
   </style>
 </head>
 <body>
   <h1>📅 Planificador de Entrenos</h1>
-
   <div id="login">
     <input type="email" id="email" placeholder="Correo" />
     <input type="password" id="password" placeholder="Contraseña" />
@@ -30,20 +32,16 @@
     <button id="btnRegister">Registrarse</button>
   </div>
 
-  <div id="calendario">
+  <div id="calendario" style="display:none;">
     <h2>Bienvenida, Paula 👋</h2>
+    <div id="semana"></div>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getAuth,
-      createUserWithEmailAndPassword,
-      signInWithEmailAndPassword,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBfHXdq87dAuRXKBIPMDN5G20neM99NhA8",
@@ -56,22 +54,76 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     const loginDiv = document.getElementById("login");
     const calendarioDiv = document.getElementById("calendario");
+    const semanaDiv = document.getElementById("semana");
+
+    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const opciones = ["", "Correr", "Escalar", "GYM", "Guardia", "Descanso", "DEKA"];
+    const estaciones = ["SkiErg", "Box Jumps", "Farmer Carry", "Air Bike", "Sandbag Lunges"];
+
+    function crearCalendario(userId) {
+      semanaDiv.innerHTML = "";
+      dias.forEach(dia => {
+        const cont = document.createElement("div");
+        cont.className = "dia";
+        cont.innerHTML = `<strong>${dia}</strong>: `;
+        const select = document.createElement("select");
+        const extra = document.createElement("div");
+        extra.className = "extra";
+
+        opciones.forEach(op => {
+          const option = document.createElement("option");
+          option.value = op;
+          option.textContent = op;
+          select.appendChild(option);
+        });
+
+        select.addEventListener("change", async () => {
+          extra.innerHTML = "";
+          if (select.value === "DEKA") {
+            estaciones.forEach(est => {
+              const label = document.createElement("label");
+              label.textContent = est + ": ";
+              const input = document.createElement("input");
+              input.placeholder = "Ejercicio";
+              extra.appendChild(label);
+              extra.appendChild(input);
+              extra.appendChild(document.createElement("br"));
+            });
+          } else if (select.value === "GYM" || select.value === "Correr") {
+            const input = document.createElement("input");
+            input.placeholder = "Descripción del entreno";
+            extra.appendChild(input);
+          }
+          extra.style.display = "block";
+
+          // Guardar datos en Firestore
+          const ref = doc(db, "usuarios", userId);
+          const snap = await getDoc(ref);
+          const datos = snap.exists() ? snap.data() : {};
+          datos[dia] = { tipo: select.value, detalles: extra.innerHTML };
+          await setDoc(ref, datos);
+        });
+
+        cont.appendChild(select);
+        cont.appendChild(extra);
+        semanaDiv.appendChild(cont);
+      });
+    }
 
     function login() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      signInWithEmailAndPassword(auth, email, password)
-        .catch(err => alert("Error al iniciar sesión: " + err.message));
+      signInWithEmailAndPassword(auth, email, password).catch(err => alert("Error al iniciar sesión: " + err.message));
     }
 
     function register() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      createUserWithEmailAndPassword(auth, email, password)
-        .catch(err => alert("Error al registrarse: " + err.message));
+      createUserWithEmailAndPassword(auth, email, password).catch(err => alert("Error al registrarse: " + err.message));
     }
 
     function logout() {
@@ -81,10 +133,11 @@
     document.getElementById("btnLogin").addEventListener("click", login);
     document.getElementById("btnRegister").addEventListener("click", register);
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
       if (user) {
         loginDiv.style.display = "none";
         calendarioDiv.style.display = "block";
+        crearCalendario(user.uid);
       } else {
         loginDiv.style.display = "block";
         calendarioDiv.style.display = "none";
