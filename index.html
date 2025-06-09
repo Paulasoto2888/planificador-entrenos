@@ -3,84 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Planificador Semanal</title>
+  <title>Planificador de Entrenos</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-    input, button { margin: 5px; padding: 10px; }
-    #calendario { display: none; margin-top: 30px; }
-    .dia { margin-bottom: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    input, button {
+      margin: 5px;
+      padding: 10px;
+    }
+    #calendario {
+      display: none;
+      margin-top: 30px;
+    }
   </style>
 </head>
 <body>
-  <h1>🗓️ Planificador de Entrenos</h1>
+  <h1>📅 Planificador de Entrenos</h1>
 
   <div id="login">
     <input type="email" id="email" placeholder="Correo" />
     <input type="password" id="password" placeholder="Contraseña" />
-    <button onclick="login()">Iniciar sesión</button>
-    <button onclick="register()">Registrarse</button>
+    <button id="btnLogin">Iniciar sesión</button>
+    <button id="btnRegister">Registrarse</button>
   </div>
 
   <div id="calendario">
-    <h2>Hola 👋</h2>
-    <div id="semana">
-      <div class="dia">Lunes: <select></select></div>
-      <div class="dia">Martes: <select></select></div>
-      <div class="dia">Miércoles: <select></select></div>
-      <div class="dia">Jueves: <select></select></div>
-      <div class="dia">Viernes: <select></select></div>
-      <div class="dia">Sábado: <select></select></div>
-      <div class="dia">Domingo: <select></select></div>
-    </div>
+    <h2>Bienvenida, Paula 👋</h2>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    
-const firebaseConfig = {
-  apiKey: "AIzaSyBfHXdq87dAuRXKBIPMDN5G20neM99NhA8",
-  authDomain: "planificador-firebase-v2.firebaseapp.com",
-  projectId: "planificador-firebase-v2",
-  storageBucket: "planificador-firebase-v2.firebasestorage.app",
-  messagingSenderId: "1060458357786",
-  appId: "1:1060458357786:web:2fca43f7c0d90196dcdda3"
-};
-
+    const firebaseConfig = {
+      apiKey: "AIzaSyBfHXdq87dAuRXKBIPMDN5G20neM99NhA8",
+      authDomain: "planificador-firebase-v2.firebaseapp.com",
+      projectId: "planificador-firebase-v2",
+      storageBucket: "planificador-firebase-v2.firebasestorage.app",
+      messagingSenderId: "1060458357786",
+      appId: "1:1060458357786:web:2fca43f7c0d90196dcdda3"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
     const loginDiv = document.getElementById("login");
-    const calDiv = document.getElementById("calendario");
-
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        loginDiv.style.display = "none";
-        calDiv.style.display = "block";
-      } else {
-        loginDiv.style.display = "block";
-        calDiv.style.display = "none";
-      }
-    });
+    const calendarioDiv = document.getElementById("calendario");
 
     function login() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      signInWithEmailAndPassword(auth, email, password).catch(err => alert("Error al iniciar sesión: " + err.message));
+      signInWithEmailAndPassword(auth, email, password)
+        .catch(err => alert("Error al iniciar sesión: " + err.message));
     }
 
     function register() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      createUserWithEmailAndPassword(auth, email, password).catch(err => alert("Error al registrarse: " + err.message));
+      createUserWithEmailAndPassword(auth, email, password)
+        .catch(err => alert("Error al registrarse: " + err.message));
     }
 
     function logout() {
       signOut(auth);
     }
+
+    document.getElementById("btnLogin").addEventListener("click", login);
+    document.getElementById("btnRegister").addEventListener("click", register);
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginDiv.style.display = "none";
+        calendarioDiv.style.display = "block";
+      } else {
+        loginDiv.style.display = "block";
+        calendarioDiv.style.display = "none";
+      }
+    });
   </script>
 </body>
 </html>
